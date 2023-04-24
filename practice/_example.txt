@@ -1,0 +1,416 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// You can define your own (one or more)
+// structures here. However, we eventually
+// need the data type "tree_t".
+// For example:
+// typedef struct node {
+//    ...
+// } node_t;
+// typedef node_t tree_t;
+
+// Write your code here
+// ...
+typedef struct node{
+	int value,depth;
+	struct node *firstChild,*lastChild,*nextSibling,*parent,*prevSibling;
+} node_t;
+typedef node_t tree_t;
+
+typedef struct element{
+	struct node *value;
+	struct element *prev;
+} element_t;
+typedef element_t stack_t;
+
+typedef struct queue{
+	struct node *value;
+	struct queue *next;
+} queue_t;
+typedef queue_t queue_t;
+
+queue_t* enqueue(queue_t* queue,node_t* value){
+	queue_t* new = (queue_t*)malloc(sizeof(queue_t));
+	new->value = value;
+	new->next = NULL;
+	if(queue == NULL){
+		return new;
+	}
+	queue_t* temp = queue;
+	while(temp->next != NULL){
+		temp = temp->next;
+	}
+	temp->next = new;
+	return queue;
+}
+
+node_t* front(queue_t* queue){
+	return queue->value;
+}
+
+queue_t* dequeue(queue_t* queue){
+	return queue->next;
+}
+
+element_t* push(stack_t *s,node_t* value){
+	element_t *new=(element_t*)malloc(sizeof(element_t));
+	new->value=value;
+	new->prev=s;
+	return new;
+}
+node_t* top(stack_t *s){
+	return s->value;
+}
+element_t* pop(stack_t *s){
+	element_t *temp=s;
+	s=s->prev;
+	free(temp);
+	return s;
+}
+node_t* createNode(int value){
+	node_t* newNode = (node_t*)malloc(sizeof(node_t));
+	newNode->value = value;
+	newNode->depth = 0;
+	newNode->firstChild = newNode->lastChild = newNode->nextSibling = newNode->prevSibling = newNode->parent = NULL;
+	return newNode;
+}
+node_t* attach(node_t* currentNode, int parent, int value){
+	if(currentNode == NULL){
+		return createNode(value);
+	}
+	if(currentNode->value == parent){
+		node_t* newNode = createNode(value);
+		newNode->parent = currentNode;
+		newNode->depth = currentNode->depth + 1;
+		if(currentNode->firstChild == NULL){
+			// if currentNode has no child
+			// then newNode will be both firstChild and lastChild
+			currentNode->firstChild = newNode;
+			currentNode->lastChild = newNode;
+		}else{
+			// if currentNode has some child
+			// create relation between newNode and lastChild
+			currentNode->lastChild->nextSibling = newNode;
+			newNode->prevSibling = currentNode->lastChild;
+			// newNode will be lastChild
+			currentNode->lastChild = newNode;
+		}
+		return currentNode;
+	}
+	//Searching process
+	if(currentNode->nextSibling != NULL)
+		attach(currentNode->nextSibling, parent, value);
+	if(currentNode->firstChild != NULL)
+		attach(currentNode->firstChild, parent, value);
+	return currentNode;
+}
+node_t* detach(node_t* currentNode, int value){
+	if(currentNode->value == value){
+		if(currentNode->prevSibling != NULL)
+			// if currentNode has no prevSibling then currentNode is not firstChild
+			currentNode->prevSibling->nextSibling = currentNode->nextSibling;
+		else
+			// currentNode is firstChild
+			currentNode->parent->firstChild = currentNode->nextSibling;
+		if(currentNode->nextSibling != NULL)
+			// if currentNode has not nextSibling then currentNode is not lastChild
+			currentNode->nextSibling->prevSibling = currentNode->prevSibling;
+		else
+			// currentNode is lastChild
+			currentNode->parent->lastChild = currentNode->prevSibling;
+		return NULL;
+	}
+	//Searching process
+	if(currentNode->nextSibling != NULL)
+		detach(currentNode->nextSibling, value);
+	if(currentNode->firstChild != NULL)
+		detach(currentNode->firstChild, value);
+	return currentNode;
+}
+int search(node_t* currentNode,int value){
+	if(currentNode->value == value)	return 1;
+	//Searching process
+	if(currentNode->nextSibling != NULL && search(currentNode->nextSibling,value))
+		return 1;
+	if(currentNode->firstChild != NULL && search(currentNode->firstChild,value))
+		return 1;
+	return 0;
+}
+int degree(node_t* currentNode, int value){
+	if(currentNode->value == value){
+		node_t* child = currentNode->firstChild;
+		int cnt = 0;
+		while(child != NULL){
+			cnt++;
+			child = child->nextSibling;
+		}
+		return cnt;
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		int val = degree(currentNode->nextSibling, value);
+		if(val != -1)
+			return val;
+	}
+	if(currentNode->firstChild != NULL){
+		int val = degree(currentNode->firstChild, value);
+		if(val != -1)
+			return val;
+	}
+	return -1;
+}
+int is_root(node_t* currentNode, int value){
+	return (currentNode->value == value);
+}
+int is_leaf(node_t* currentNode, int value){
+	if(currentNode->value == value)
+		return (currentNode->firstChild == NULL);
+	// searching process
+	if(currentNode->nextSibling != NULL){
+		int val = is_leaf(currentNode->nextSibling, value);
+		if(val != -1)
+			return val;
+	}
+	if(currentNode->firstChild != NULL){
+		int val = is_leaf(currentNode->firstChild, value);
+		if(val != -1)
+			return val;
+	}
+	return -1;
+}
+void siblings(node_t* currentNode, int value){
+	if(currentNode->value == value){
+		if(currentNode->parent == NULL)	return ;
+		node_t* sibling = currentNode->parent->firstChild;
+		while(sibling != NULL){
+			if(sibling != currentNode)
+				printf("%d ",sibling->value);
+			sibling = sibling->nextSibling;
+		}
+		printf("\n");
+		return;
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		siblings(currentNode->nextSibling, value);
+	}
+	if(currentNode->firstChild != NULL){
+		siblings(currentNode->firstChild, value);
+	}
+}
+int depth(node_t* currentNode, int value){
+	if(currentNode->value == value)
+		return currentNode->depth;
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		int val = depth(currentNode->nextSibling, value);
+		if(val != -1)
+			return val;
+	}
+	if(currentNode->firstChild != NULL){
+		int val = depth(currentNode->firstChild, value);
+		if(val != -1)
+			return val;
+	}
+	return -1;
+}
+void print_path(node_t* currentNode, int start, int end){
+	if(currentNode->value == end){
+		stack_t* stack = NULL;
+		node_t* node = currentNode;
+		while(node->value != start){
+			stack = push(stack,node);
+			node = node->parent;
+		}
+		stack = push(stack,node);
+		while(stack!=NULL){
+			printf("%d ",top(stack)->value);
+			stack = pop(stack);
+		}
+		printf("\n");
+		return ;
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		print_path(currentNode->nextSibling, start, end);
+	}
+	if(currentNode->firstChild != NULL){
+		print_path(currentNode->firstChild, start, end);
+	}
+}
+int path_length(node_t* currentNode, int start,int end){
+	if(currentNode->value == end){
+		int end_depth = currentNode->depth;
+		node_t* node = currentNode;
+		while(node->value != start)
+			node = node->parent;
+		int start_depth = node->depth;
+		return end_depth - start_depth + 1;
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		int val = path_length(currentNode->nextSibling, start, end);
+		if(val != -1)
+			return val;
+	}
+	if(currentNode->firstChild != NULL){
+		int val = path_length(currentNode->firstChild, start, end);
+		if(val != -1)
+			return val;
+	}
+	return -1;
+}
+void ancestor(node_t* currentNode, int value){
+	// print all ancestor of value
+	if(currentNode->value == value){
+		node_t* ancestor = currentNode;
+		stack_t* stack = NULL;
+		while(ancestor != NULL){
+			stack = push(stack,ancestor);
+			ancestor = ancestor->parent;
+		}
+		while(stack != NULL){
+			printf("%d ",top(stack)->value);
+			stack = pop(stack);
+		}
+		printf("\n");
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		ancestor(currentNode->nextSibling, value);
+	}
+	if(currentNode->firstChild != NULL){
+		ancestor(currentNode->firstChild, value);
+	}
+}
+void bfs(node_t* currentNode){
+	queue_t* queue = NULL;
+	queue = enqueue(queue,currentNode);
+	while(queue != NULL){
+		node_t* node = front(queue);
+		queue = dequeue(queue);
+		printf("%d ",node->value);
+		node_t* child = node->firstChild;
+		while(child != NULL){
+			queue = enqueue(queue,child);
+			child = child->nextSibling;
+		}
+	}
+	printf("\n");
+}
+void descendant(node_t* currentNode, int value){
+	// print all descendant of value
+	if(currentNode->value == value){
+		bfs(currentNode);
+		return ;
+	}
+	// Searching Process
+	if(currentNode->nextSibling != NULL){
+		descendant(currentNode->nextSibling, value);
+	}
+	if(currentNode->firstChild != NULL){
+		descendant(currentNode->firstChild, value);
+	}
+}
+
+void dfs(node_t* currentNode){
+	stack_t* stack = NULL;
+	stack = push(stack,currentNode);
+	while(stack != NULL){
+		node_t* node = top(stack);
+		stack = pop(stack);
+		printf("%d ",node->value);
+		if(node->nextSibling != NULL)
+			stack = push(stack,node->nextSibling);
+		if(node->firstChild != NULL)
+			stack = push(stack,node->firstChild);
+	}
+}
+void print_tree(node_t* currentNode){
+	stack_t* stack = NULL;
+	stack = push(stack,currentNode);
+	while(stack != NULL){
+		node_t* node = top(stack);
+		stack = pop(stack);
+		int i=0;
+		for(i=0;i<4*node->depth;i++)
+			printf(" ");
+		printf("%d\n",node->value);
+		if(node->nextSibling != NULL)
+			stack = push(stack,node->nextSibling);
+		if(node->firstChild != NULL)
+			stack = push(stack,node->firstChild);
+	}
+}
+int main(void) {
+	tree_t *t = NULL;
+	int n, i, command;
+	int parent, child, node, start, end;
+
+	scanf("%d", &n);
+	for (i=0; i<n; i++) {
+		scanf("%d", &command);
+		switch(command) {
+			case 1:
+				scanf("%d %d", &parent, &child);
+				t = attach(t, parent, child);
+				break;
+			case 2:
+				scanf("%d", &node);
+				t = detach(t, node);
+				break;
+			case 3:
+				scanf("%d", &node);
+				printf("%d\n", search(t, node));
+				break;
+			case 4:
+				scanf("%d", &node);
+				printf("%d\n", degree(t, node));
+				break;
+			case 5:
+				scanf("%d", &node);
+				printf("%d\n", is_root(t, node));
+				break;
+			case 6:
+				scanf("%d", &node);
+				printf("%d\n", is_leaf(t, node));
+				break;
+			case 7:
+				scanf("%d", &node);
+				siblings(t, node);
+				break;
+			case 8:
+				scanf("%d", &node);
+				printf("%d\n", depth(t, node));
+				break;
+			case 9:
+				scanf("%d %d", &start, &end);
+				print_path(t, start, end);
+				break;
+			case 10:
+				scanf("%d %d", &start, &end);
+				printf("%d\n", path_length(t, start, end));
+				
+				break;
+			case 11:
+				scanf("%d", &node);
+				ancestor(t, node);
+				break;
+			case 12:
+				scanf("%d", &node);
+				descendant(t, node);
+				break;
+			case 13:
+				bfs(t);
+				break;
+			case 14:
+				dfs(t);
+				break;
+			case 15:
+				print_tree(t);
+				break;
+		}
+	}
+	return 0;
+}
